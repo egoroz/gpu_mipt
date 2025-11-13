@@ -1,4 +1,5 @@
 #include <stdio.h> 
+#include <cmath>
 #define N (1024)  
 
 __global__ void kernel ( float * dA )  { 
