@@ -12,7 +12,8 @@ int main ( int argc, char * argv [] )  {
     float *hA, *dA;   
     hA = ( float* ) malloc (N * sizeof ( float ) );   
     cudaMalloc ( (void**)&dA, N * sizeof ( float ) );  
-    kernel <<< N/512, 512 >>> ( dA );   
+    kernel <<< N/512, 512 >>> ( dA );
+    cudaDeviceSynchronize();
     cudaMemcpy ( hA, dA, N * sizeof ( float ), cudaMemcpyDeviceToHost );  
     for ( int idx = 0; idx < N; idx++ ) printf ( "a[%d] = %.8f\n", idx, hA[idx] );   
     free ( hA ); 
