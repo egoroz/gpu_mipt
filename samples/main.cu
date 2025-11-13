@@ -1,5 +1,5 @@
 #include <stdio.h> 
-#define N (1024*1024)  
+#define N (1024)  
 
 __global__ void kernel ( float * dA )  { 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;   
