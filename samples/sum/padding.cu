@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cuda_runtime.h>
 
 
 #define CUDA_CHECK(ans) { cudaAssert((ans), __FILE__, __LINE__); }
@@ -19,9 +20,8 @@ __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
     int tid = threadIdx.x;
 
     int n_threads = blockDim.x;
-    int rows = N / n_threads;
+    size_t rows = N / n_threads;
     
-    float sum = 0;
     dPartial[tid] = 0;
     for(int i = 0; i < rows; ++i){
         dPartial[tid] += dA[tid + i * n_threads];
@@ -43,29 +43,48 @@ int main(int argc, char** argv){
     for(int i = N; i < paddedN; ++i) hA[i] = 0.0f;
 
     cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
 
 
     float *dA = nullptr, *dPartial = nullptr;
-    cudaMalloc(&dA, paddedN * sizeof(float));
-    cudaMalloc(&dPartial, n_threads * sizeof(float));
-    cudaMemcpy(dA, hA, paddedN * sizeof(float), cudaMemcpyHostToDevice);
+    CUDA_CHECK(cudaMalloc(&dA, paddedN * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dPartial, n_threads * sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(dA, hA, paddedN * sizeof(float), cudaMemcpyHostToDevice));
 
-    cudaEventRecord(start);
+    CUDA_CHECK(cudaEventRecord(start));
     reduceKernel<<<n_blocks, n_threads>>>(dA, dPartial, paddedN);
-    cudaEventRecord(stop);
+    CUDA_CHECK(cudaEventRecord(stop));
 
-    cudaMemcpy(hPartial, dPartial, n_threads * sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaGetLastError());
 
-    cudaEventSynchronize(stop); // Можно без нее т.к. синхронизация есть в cudaMemcpy
+    CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * sizeof(float), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaEventSynchronize(stop)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float time_ms = 0;
-    cudaEventElapsedTime(&time_ms, start, stop);
+    CUDA_CHECK(cudaEventElapsedTime(&time_ms, start, stop));
 
     float result = 0;
     for(int i = 0; i < n_threads; ++i){
         result += hPartial[i];
     }
 
-    std::cout << "Result = " << result << "; Time = " << time_ms << std::endl;
+    std::cout << "Result = " << result << "; Time = " << time_ms << " ms" << std::endl;
+
+    double ref = 0.0;
+    for (size_t i = 0; i < N; ++i) {
+        ref += 0.1 * static_cast<double>(i);
+    }
+
+    std::cout << "CPU res = " << ref << std::endl;
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    cudaFree(dA);
+    cudaFree(dPartial);
+    
+    free(hA);
+    free(hPartial);
+
 }
