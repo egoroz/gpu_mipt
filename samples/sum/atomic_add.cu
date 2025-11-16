@@ -66,7 +66,7 @@ int main(int argc, char** argv){
     std::cout << "GPU res = " << result << "; Time = " << gpu_ms << " ms" << std::endl;
 
 
-    float cpu_sum = 0.0;
+    double cpu_sum = 0.0;
     auto start_cpu = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < N; ++i) {
         cpu_sum += hA[i];
