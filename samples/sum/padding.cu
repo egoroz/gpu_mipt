@@ -35,7 +35,7 @@ int main(int argc, char** argv){
     size_t n_threads = 512;          // may vary
     size_t c = n_threads * n_blocks; // число столбцов
 
-    size_t N = 1e6;
+    size_t N = 1e9;
     size_t paddedN = ((N + c - 1) / c) * c; 
 
     float* hA = static_cast<float*>(malloc(paddedN * sizeof(float)));
