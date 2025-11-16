@@ -28,7 +28,7 @@ __global__ void reduceKernel(float* dA, float* dSum, size_t N){
 int main(int argc, char** argv){
     size_t N = 1e7;
 
-    size_t n_threads = 512;
+    size_t n_threads = 1024;
     size_t n_blocks = (N - 1) / n_threads + 1;
 
 
