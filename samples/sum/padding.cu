@@ -32,7 +32,7 @@ __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
 int main(int argc, char** argv){
     size_t k_SM = 40;
     size_t n_blocks = 16 * k_SM;     // may vary. 32 blocks in the SM
-    size_t n_threads = 256;          // may vary
+    size_t n_threads = 512;          // may vary
     size_t c = n_threads * n_blocks; // число столбцов
 
     size_t N = 1e7;
