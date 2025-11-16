@@ -18,21 +18,21 @@ void fill_array(size_t N, float* arr){
 }
 
 __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
-    int tid = threadIdx.x;
-
-    int n_threads = blockDim.x;
-    size_t rows = N / n_threads;
+    size_t shift = blockDim.x * blockIdx.x;
+    int tid = threadIdx.x + shift;
+    size_t rows = N / blockDim.x * gridDim.x;
     
     dPartial[tid] = 0;
     for(int i = 0; i < rows; ++i){
-        dPartial[tid] += dA[tid + i * n_threads];
+        dPartial[tid] += dA[tid + i * shift];
     }
 }
 
-
+// Nvidia T4 (40 SM)
 int main(int argc, char** argv){
-    size_t n_blocks = 1;
-    size_t n_threads = 1024;  // may vary
+    size_t k_SM = 40;
+    size_t n_blocks = 32 * k_SM;    // may vary. 32 blocks in the SM
+    size_t n_threads = 1024;        // may vary
 
     size_t N = 1e6;
     size_t paddedN = ((N + n_threads - 1) / n_threads) * n_threads; 
@@ -47,19 +47,18 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventCreate(&start_gpu));
     CUDA_CHECK(cudaEventCreate(&stop_gpu));
     
-    
-    CUDA_CHECK(cudaEventRecord(start_gpu));
+    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     float *dA = nullptr, *dPartial = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, paddedN * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&dPartial, n_threads * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dPartial, n_threads * n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, paddedN * sizeof(float), cudaMemcpyHostToDevice));
 
     reduceKernel<<<n_blocks, n_threads>>>(dA, dPartial, paddedN);
-    CUDA_CHECK(cudaEventRecord(stop_gpu));
+    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
 
     CUDA_CHECK(cudaGetLastError());
 
-    CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * n_blocks * sizeof(float), cudaMemcpyDeviceToHost));
 
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float gpu_ms = 0;
