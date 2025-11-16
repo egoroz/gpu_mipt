@@ -33,7 +33,7 @@ int main(int argc, char** argv){
 
 
     float* hA = static_cast<float*>(malloc(N * sizeof(float)));
-    float* hSum = static_cast<float*>(malloc(sizeof(float)));
+    float* hSum = static_cast<float*>(malloc(n_blocks * sizeof(float)));
 
     fill_array(N, hA);
 
