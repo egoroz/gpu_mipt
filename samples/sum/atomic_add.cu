@@ -19,7 +19,7 @@ void fill_array(size_t N, float* arr){
 
 __global__ void reduceKernel(float* dA, float* dSum, size_t N){
 
-    size_t shift = blockIdx.x * blockDim.x * gridDim.x;
+    size_t shift = blockIdx.x * blockDim.x;
     int tid = threadIdx.x + shift;
     
     if(tid < N){

@@ -28,7 +28,13 @@ __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
     }
 }
 
-// Nvidia T4 (40 SM)
+/*
+Nvidia T4 (40 SM) google colab
+
+GPU res = 4.99965e+12; Time = 9.66675 ms
+CPU res = 5.0815e+12; Time = 29.1528 ms
+Boost(time CPU/GPU) = 3.01578
+*/
 int main(int argc, char** argv){
     size_t k_SM = 40;
     size_t n_blocks = 16 * k_SM;     // may vary. 32 blocks in the SM
