@@ -38,7 +38,7 @@ int main(int argc, char** argv){
     size_t paddedN = ((N + n_threads - 1) / n_threads) * n_threads; 
 
     float* hA = static_cast<float*>(malloc(paddedN * sizeof(float)));
-    float* hPartial = static_cast<float*>(malloc(n_threads * sizeof(float)));
+    float* hPartial = static_cast<float*>(malloc(n_threads * n_blocks * sizeof(float)));
 
     fill_array(N, hA);
     for(int i = N; i < paddedN; ++i) hA[i] = 0.0f;
