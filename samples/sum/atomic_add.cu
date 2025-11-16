@@ -17,7 +17,7 @@ void fill_array(size_t N, float* arr){
     }
 }
 
-__global__ void reduceKernel(float* dA, float* dSum, size_t N){
+__global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ dSum, size_t N){
     size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
     if(tid < N){
         atomicAdd(&dSum[blockIdx.x], dA[tid]);

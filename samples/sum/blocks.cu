@@ -17,7 +17,7 @@ void fill_array(size_t N, float* arr){
     }
 }
 
-__global__ void reduceKernel(const float* d_in, float* d_out, size_t N){
+__global__ void reduceKernel(const float* __restrict__ d_in, float* __restrict__ d_out, size_t N){
     extern __shared__ float sh_data[];  // blockDim * sizeof(float)  L1 Cache
     size_t tid_local = threadIdx.x;
     size_t tid_global = threadIdx.x + blockIdx.x * blockDim.x;
@@ -41,7 +41,9 @@ __global__ void reduceKernel(const float* d_in, float* d_out, size_t N){
 /*
 Nvidia T4 (40 SM, L1 Cache = 64 KB / SM  => 2560 KB total) google colab
 
-
+GPU res = 5e+12; Time = 9.96733 ms
+CPU res = 5.0815e+12; Time = 28.9601 ms
+Boost(time CPU/GPU) = 2.90551
 */
 int main(int argc, char** argv){
     size_t n_threads = 256;          
