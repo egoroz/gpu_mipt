@@ -21,8 +21,8 @@ __global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ d
     size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
     if(tid < N){
         atomicAdd(&dSum[blockIdx.x], dA[tid]);
-        __syncthreads();
-        if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
+        // __syncthreads();
+        // if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
     }
 
 }
