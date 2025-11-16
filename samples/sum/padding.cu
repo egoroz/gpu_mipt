@@ -37,9 +37,9 @@ Boost(time CPU/GPU) = 3.01578
 */
 int main(int argc, char** argv){
     size_t k_SM = 40;
-    size_t n_blocks = 16 * k_SM;     // may vary. 32 blocks in the SM
+    size_t n_blocks = 16 * k_SM;     // may vary. 16 blocks in the SM
     size_t n_threads = 128;          // may vary
-    size_t c = n_threads * n_blocks; // число столбцов
+    size_t c = n_threads * n_blocks; // num columns
 
     size_t N = 1e7;
     size_t paddedN = ((N + c - 1) / c) * c; 

@@ -17,64 +17,80 @@ void fill_array(size_t N, float* arr){
     }
 }
 
-__global__ void reduceKernel(float* dA, float* dSum, size_t N){
-    size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
-    if(tid < N){
-        atomicAdd(&dSum[blockIdx.x], dA[tid]);
-        __syncthreads();
-        if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
-    }
+__global__ void reduceKernel(const float* d_in, float* d_out, size_t N){
+    extern __shared__ float sh_data[];  // blockDim * sizeof(float)  L1 Cache
+    size_t tid_local = threadIdx.x;
+    size_t tid_global = threadIdx.x + blockIdx.x * blockDim.x;
 
+    float sum = 0.0f;
+    if(tid_global < N) sum += d_in[tid_global];
+    sh_data[tid_local] = sum;
+    __syncthreads();
+
+    for(size_t stride = blockDim.x / 2; stride > 0; stride >>= 1){
+        if(tid_local < stride){
+            sh_data[tid_local] += sh_data[tid_local + stride];
+        }
+        __syncthreads();
+    }
+    if(tid_local == 0){
+        d_out[blockIdx.x] = sh_data[0];
+    }
 }
 
 /*
-Nvidia T4 (40 SM) google colab
+Nvidia T4 (40 SM, L1 Cache = 64 KB / SM  => 2560 KB total) google colab
 
-GPU res = 5e+12; Time = 21.0164 ms
-CPU res = 5e+12; Time = 29.8656 ms
-Boost(time CPU/GPU) = 1.42106
+
 */
 int main(int argc, char** argv){
+    size_t n_threads = 128;          
     size_t N = 1e7;
 
-    size_t n_threads = 512;
-    size_t n_blocks = (N - 1) / n_threads + 1;
-
-
     float* hA = static_cast<float*>(malloc(N * sizeof(float)));
-    float* hSum = static_cast<float*>(malloc(n_blocks * sizeof(float)));
 
     fill_array(N, hA);
+    for(int i = N; i < N; ++i) hA[i] = 0.0f;
 
     cudaEvent_t start_gpu, stop_gpu;
     CUDA_CHECK(cudaEventCreate(&start_gpu));
     CUDA_CHECK(cudaEventCreate(&stop_gpu));
     
     CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
-    float *dA = nullptr, *dSum = nullptr;
-    CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&dSum, n_blocks * sizeof(float)));
-    CUDA_CHECK(cudaMemset(dSum, 0, n_blocks * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
+    float *d_in = nullptr, *d_out = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_in, N * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_out, N * sizeof(float)));
+    CUDA_CHECK(cudaMemset(d_out, 0, N * sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_in, hA, N * sizeof(float), cudaMemcpyHostToDevice));
     
-    reduceKernel<<<n_blocks, n_threads>>>(dA, dSum, N);
-    
-    CUDA_CHECK(cudaGetLastError());
-    
-    CUDA_CHECK(cudaMemcpy(hSum, dSum, n_blocks * sizeof(float), cudaMemcpyDeviceToHost));
+    size_t currentN = N;
+    while(true){
+        size_t grid_sz = (currentN - 1) / n_threads + 1;
+        size_t shared_bytes = n_threads * sizeof(float);
 
-    float result = hSum[0];
+        reduceKernel<<<grid_sz, n_threads, shared_bytes>>>(d_in, d_out, currentN);
+
+        CUDA_CHECK(cudaGetLastError());
+        CUDA_CHECK(cudaDeviceSynchronize());
+
+        currentN = grid_sz;
+        if(currentN <= 1){break;}
+        
+        std::swap(d_in, d_out);
+    }
+    
+    float result = 0;    
+    CUDA_CHECK(cudaMemcpy(&result, d_out, sizeof(float), cudaMemcpyDeviceToHost));  
     CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
 
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float gpu_ms = 0;
     CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, start_gpu, stop_gpu));
-
-    
     std::cout << "GPU res = " << result << "; Time = " << gpu_ms << " ms" << std::endl;
 
 
-    double cpu_sum = 0.0;
+    float cpu_sum = 0.0;
+
     auto start_cpu = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < N; ++i) {
         cpu_sum += hA[i];
@@ -88,10 +104,8 @@ int main(int argc, char** argv){
     cudaEventDestroy(start_gpu);
     cudaEventDestroy(stop_gpu);
 
-    cudaFree(dA);
-    cudaFree(dSum);
+    cudaFree(d_in);
+    cudaFree(d_out);
     
     free(hA);
-    free(hSum);
-
 }
