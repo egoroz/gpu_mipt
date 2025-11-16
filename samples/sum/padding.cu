@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <cuda_runtime.h>
 
 
@@ -42,9 +43,9 @@ int main(int argc, char** argv){
     fill_array(N, hA);
     for(int i = N; i < paddedN; ++i) hA[i] = 0.0f;
 
-    cudaEvent_t start, stop;
-    CUDA_CHECK(cudaEventCreate(&start));
-    CUDA_CHECK(cudaEventCreate(&stop));
+    cudaEvent_t start_gpu, stop_gpu;
+    CUDA_CHECK(cudaEventCreate(&start_gpu));
+    CUDA_CHECK(cudaEventCreate(&stop_gpu));
 
 
     float *dA = nullptr, *dPartial = nullptr;
@@ -52,34 +53,40 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaMalloc(&dPartial, n_threads * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, paddedN * sizeof(float), cudaMemcpyHostToDevice));
 
-    CUDA_CHECK(cudaEventRecord(start));
+    CUDA_CHECK(cudaEventRecord(start_gpu));
     reduceKernel<<<n_blocks, n_threads>>>(dA, dPartial, paddedN);
-    CUDA_CHECK(cudaEventRecord(stop));
+    CUDA_CHECK(cudaEventRecord(stop_gpu));
 
     CUDA_CHECK(cudaGetLastError());
 
     CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * sizeof(float), cudaMemcpyDeviceToHost));
 
-    CUDA_CHECK(cudaEventSynchronize(stop)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
-    float time_ms = 0;
-    CUDA_CHECK(cudaEventElapsedTime(&time_ms, start, stop));
+    CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
+    float gpu_ms = 0;
+    CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, start_gpu, stop_gpu));
 
     float result = 0;
     for(int i = 0; i < n_threads; ++i){
         result += hPartial[i];
     }
 
-    std::cout << "Result = " << result << "; Time = " << time_ms << " ms" << std::endl;
+    std::cout << "GPU res = " << result << "; Time = " << gpu_ms << " ms" << std::endl;
 
-    double ref = 0.0;
+
+    float cpu_sum = 0.0;
+
+    auto start_cpu = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < N; ++i) {
-        ref += 0.1 * static_cast<double>(i);
+        cpu_sum += 0.1 * static_cast<double>(i);
     }
+    auto end_cpu = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> cpu_ms = end_cpu - start_cpu;
 
-    std::cout << "CPU res = " << ref << std::endl;
+    std::cout << "CPU res = " << cpu_sum << "; Time = " << cpu_ms.count() << " ms" << std::endl;
+    std::cout << "GPU Boost = " << 
 
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    cudaEventDestroy(start_gpu);
+    cudaEventDestroy(stop_gpu);
 
     cudaFree(dA);
     cudaFree(dPartial);
