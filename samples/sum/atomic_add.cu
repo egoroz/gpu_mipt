@@ -21,8 +21,8 @@ __global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ d
     size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
     if(tid < N){
         atomicAdd(&dSum[blockIdx.x], dA[tid]);
-        // __syncthreads();
-        // if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
+        __syncthreads();
+        if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
     }
 
 }
@@ -30,9 +30,15 @@ __global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ d
 /*
 Nvidia T4 (40 SM) google colab
 
+Full work (data transport + calculations)
 GPU res = 5e+12; Time = 21.0164 ms
 CPU res = 5e+12; Time = 29.8656 ms
 Boost(time CPU/GPU) = 1.42106
+
+Only calculations
+GPU res = 5e+12; Time = 10.5654 ms
+CPU res = 5e+12; Time = 28.9812 ms
+Boost(time CPU/GPU) = 2.74303
 */
 int main(int argc, char** argv){
     size_t N = 1e7;
@@ -50,22 +56,22 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventCreate(&start_gpu));
     CUDA_CHECK(cudaEventCreate(&stop_gpu));
     
+    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     float *dA = nullptr, *dSum = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dSum, n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemset(dSum, 0, n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
     
-    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     reduceKernel<<<n_blocks, n_threads>>>(dA, dSum, N);
-    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
     
     CUDA_CHECK(cudaGetLastError());
     
     CUDA_CHECK(cudaMemcpy(hSum, dSum, n_blocks * sizeof(float), cudaMemcpyDeviceToHost));
-
+    
     float result = hSum[0];
-
+    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
+    
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float gpu_ms = 0;
     CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, start_gpu, stop_gpu));

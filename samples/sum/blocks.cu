@@ -41,9 +41,15 @@ __global__ void reduceKernel(const float* __restrict__ d_in, float* __restrict__
 /*
 Nvidia T4 (40 SM, L1 Cache = 64 KB / SM  => 2560 KB total) google colab
 
+Full work (data transport + calculations)
 GPU res = 5e+12; Time = 9.96733 ms
 CPU res = 5.0815e+12; Time = 28.9601 ms
 Boost(time CPU/GPU) = 2.90551
+
+Only calculations
+GPU res = 5e+12; Time = 1.08499 ms
+CPU res = 5.0815e+12; Time = 28.7362 ms
+Boost(time CPU/GPU) = 26.4852
 */
 int main(int argc, char** argv){
     size_t n_threads = 256;          
@@ -58,6 +64,7 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventCreate(&start_gpu));
     CUDA_CHECK(cudaEventCreate(&stop_gpu));
     
+    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     float *d_in = nullptr, *d_out = nullptr;
     CUDA_CHECK(cudaMalloc(&d_in, N * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_out, N * sizeof(float)));
@@ -65,7 +72,6 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaMemcpy(d_in, hA, N * sizeof(float), cudaMemcpyHostToDevice));
     
     size_t currentN = N;
-    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     while(true){
         size_t grid_sz = (currentN - 1) / n_threads + 1;
         size_t shared_bytes = n_threads * sizeof(float);
@@ -80,9 +86,9 @@ int main(int argc, char** argv){
         
         std::swap(d_in, d_out);
     }
-    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
     
     float result = 0;    
+    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
     CUDA_CHECK(cudaMemcpy(&result, d_out, sizeof(float), cudaMemcpyDeviceToHost));  
 
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
