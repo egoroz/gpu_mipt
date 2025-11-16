@@ -31,11 +31,12 @@ __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
 // Nvidia T4 (40 SM)
 int main(int argc, char** argv){
     size_t k_SM = 40;
-    size_t n_blocks = 32 * k_SM;    // may vary. 32 blocks in the SM
-    size_t n_threads = 256;        // may vary
+    size_t n_blocks = 32 * k_SM;     // may vary. 32 blocks in the SM
+    size_t n_threads = 256;          // may vary
+    size_t c = n_threads * n_blocks; // число столбцов
 
     size_t N = 1e6;
-    size_t paddedN = ((N + n_threads - 1) / n_threads) * n_threads; 
+    size_t paddedN = ((N + c - 1) / c) * c; 
 
     float* hA = static_cast<float*>(malloc(paddedN * sizeof(float)));
     float* hPartial = static_cast<float*>(malloc(n_threads * n_blocks * sizeof(float)));
@@ -59,16 +60,16 @@ int main(int argc, char** argv){
 
     CUDA_CHECK(cudaGetLastError());
 
-    CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * n_blocks * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * n_blocks * sizeof(float), cudaMemcpyDeviceToHost));  
+      
+    float result = 0;
+    for(int i = 0; i < c; ++i){
+        result += hPartial[i];
+    }
 
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float gpu_ms = 0;
     CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, start_gpu, stop_gpu));
-
-    float result = 0;
-    for(int i = 0; i < n_threads; ++i){
-        result += hPartial[i];
-    }
 
     std::cout << "GPU res = " << result << "; Time = " << gpu_ms << " ms" << std::endl;
 
