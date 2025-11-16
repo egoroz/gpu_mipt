@@ -83,7 +83,7 @@ int main(int argc, char** argv){
     std::chrono::duration<double, std::milli> cpu_ms = end_cpu - start_cpu;
 
     std::cout << "CPU res = " << cpu_sum << "; Time = " << cpu_ms.count() << " ms" << std::endl;
-    std::cout << "GPU Boost = " << 
+    std::cout << "Boost(GPU/CPU) = " << cpu_ms.count() / gpu_ms << std::endl;
 
     cudaEventDestroy(start_gpu);
     cudaEventDestroy(stop_gpu);
