@@ -44,7 +44,7 @@ Nvidia T4 (40 SM, L1 Cache = 64 KB / SM  => 2560 KB total) google colab
 
 */
 int main(int argc, char** argv){
-    size_t n_threads = 128;          
+    size_t n_threads = 256;          
     size_t N = 1e7;
 
     float* hA = static_cast<float*>(malloc(N * sizeof(float)));
