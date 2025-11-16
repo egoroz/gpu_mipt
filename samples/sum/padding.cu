@@ -31,7 +31,7 @@ __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
 // Nvidia T4 (40 SM)
 int main(int argc, char** argv){
     size_t k_SM = 40;
-    size_t n_blocks = 32 * k_SM;     // may vary. 32 blocks in the SM
+    size_t n_blocks = 1;     // may vary. 32 blocks in the SM
     size_t n_threads = 256;          // may vary
     size_t c = n_threads * n_blocks; // число столбцов
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaGetLastError());
 
     CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * n_blocks * sizeof(float), cudaMemcpyDeviceToHost));  
-      
+
     float result = 0;
     for(int i = 0; i < c; ++i){
         result += hPartial[i];
