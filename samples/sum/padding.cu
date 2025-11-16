@@ -56,16 +56,16 @@ int main(int argc, char** argv){
     
     CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     reduceKernel<<<n_blocks, n_threads>>>(dA, dPartial, paddedN);
-    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
     
     CUDA_CHECK(cudaGetLastError());
     
     CUDA_CHECK(cudaMemcpy(hPartial, dPartial, n_threads * n_blocks * sizeof(float), cudaMemcpyDeviceToHost));  
-
+    
     float result = 0;
     for(int i = 0; i < c; ++i){
         result += hPartial[i];
     }
+    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
 
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float gpu_ms = 0;
