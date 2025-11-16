@@ -41,13 +41,13 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventCreate(&start_gpu));
     CUDA_CHECK(cudaEventCreate(&stop_gpu));
     
-    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     float *dA = nullptr, *dSum = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dSum, n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemset(dSum, 0, n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
-
+    
+    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     reduceKernel<<<n_blocks, n_threads>>>(dA, dSum, N);
     
     CUDA_CHECK(cudaGetLastError());
