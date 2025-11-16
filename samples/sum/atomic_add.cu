@@ -18,10 +18,7 @@ void fill_array(size_t N, float* arr){
 }
 
 __global__ void reduceKernel(float* dA, float* dSum, size_t N){
-
-    size_t shift = blockIdx.x * blockDim.x;
-    int tid = threadIdx.x + shift;
-    
+    size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
     if(tid < N){
         atomicAdd(dSum, dA[tid]);
     }
@@ -48,6 +45,7 @@ int main(int argc, char** argv){
     float *dA = nullptr, *dSum = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dSum, sizeof(float)));
+    CUDA_CHECK(cudaMemset(dSum, 0, sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
 
     reduceKernel<<<n_blocks, n_threads>>>(dA, dSum, N);
@@ -62,7 +60,6 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, start_gpu, stop_gpu));
 
     float result = *hSum;
-
     std::cout << "GPU res = " << result << "; Time = " << gpu_ms << " ms" << std::endl;
 
 
