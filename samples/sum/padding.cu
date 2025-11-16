@@ -23,7 +23,6 @@ __global__ void reduceKernel(float* dA, float* dPartial, size_t N){
     size_t row_sz = blockDim.x * gridDim.x;
     size_t rows = N / row_sz;
     
-    dPartial[tid] = 0;
     for(int i = 0; i < rows; ++i){
         dPartial[tid] += dA[tid + i * row_sz];
     }
@@ -52,6 +51,7 @@ int main(int argc, char** argv){
     float *dA = nullptr, *dPartial = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, paddedN * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dPartial, n_threads * n_blocks * sizeof(float)));
+    CUDA_CHECK(cudaMemset(dPartial, 0, n_threads * n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, paddedN * sizeof(float), cudaMemcpyHostToDevice));
 
     reduceKernel<<<n_blocks, n_threads>>>(dA, dPartial, paddedN);
