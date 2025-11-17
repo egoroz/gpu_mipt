@@ -18,8 +18,7 @@ void fill_array(size_t N, float* arr){
 }
 
 __global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ dPartial, size_t N){
-    size_t shift = blockDim.x * blockIdx.x;
-    int tid = threadIdx.x + shift;
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
     size_t row_sz = blockDim.x * gridDim.x;
     size_t rows = N / row_sz;
     
