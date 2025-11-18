@@ -19,8 +19,10 @@ void fill_array(size_t N, float* arr){
 
 
 __forceinline__ __device__ float warpReduceSum(float val){
+    unsigned int mask = 0xffffff;
     for(size_t offset = warpSize / 2; offset > 0; offset >>= 1)
-        val += __shfl_down(val, offset);
+
+        val += __shfl_down_sync(mask, val, offset);
     return val;
 }
 
