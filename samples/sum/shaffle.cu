@@ -92,7 +92,7 @@ int main(int argc, char** argv){
     
     CUDA_CHECK(cudaGetLastError());
     
-    CUDA_CHECK(cudaMemcpy(hSum, dSum, n_blocks * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(hSum, dSum, sizeof(float), cudaMemcpyDeviceToHost));
     
     float result = hSum[0];
     CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU

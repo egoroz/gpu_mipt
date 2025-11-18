@@ -17,14 +17,35 @@ void fill_array(size_t N, float* arr){
     }
 }
 
+__forceinline__ __device__ float warpReduceSum(float val){
+    for(size_t offset = warpSize / 2; offset > 0; offset >>= 1){
+        val = __shfl_down(val, offset);
+    }
+    return val;
+}
+
+
 __global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ dSum, size_t N){
+    // Bad way
+    // size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+    // if(tid < N){
+    //     atomicAdd(&dSum[blockIdx.x], dA[tid]);
+    //     __syncthreads();
+    //     if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
+    // }
+
+    // Good way
     size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
-    if(tid < N){
-        atomicAdd(&dSum[blockIdx.x], dA[tid]);
-        __syncthreads();
-        if(threadIdx.x == 0 && blockIdx.x != 0) atomicAdd(&dSum[0], dSum[blockIdx.x]);
+
+    float sum = 0;
+    for(size_t i = tid; i < N; i += blockDim.x * gridDim.x){
+        sum += dA[i];
     }
 
+    sum = warpReduceSum(sum);
+    if(threadIdx.x & (warpSize - 1) == 0){
+        atomicAdd(&dSum[0], sum);
+    }
 }
 
 /*
@@ -48,7 +69,7 @@ int main(int argc, char** argv){
 
 
     float* hA = static_cast<float*>(malloc(N * sizeof(float)));
-    float* hSum = static_cast<float*>(malloc(n_blocks * sizeof(float)));
+    float* hSum = static_cast<float*>(malloc(sizeof(float)));
 
     fill_array(N, hA);
 
@@ -59,7 +80,7 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     float *dA = nullptr, *dSum = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&dSum, n_blocks * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&dSum, sizeof(float)));
     CUDA_CHECK(cudaMemset(dSum, 0, n_blocks * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
     
@@ -67,7 +88,7 @@ int main(int argc, char** argv){
     
     CUDA_CHECK(cudaGetLastError());
     
-    CUDA_CHECK(cudaMemcpy(hSum, dSum, n_blocks * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(hSum, dSum, sizeof(float), cudaMemcpyDeviceToHost));
     
     float result = hSum[0];
     CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
