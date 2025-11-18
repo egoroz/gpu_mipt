@@ -19,7 +19,7 @@ void fill_array(size_t N, float* arr){
 
 
 __forceinline__ __device__ float warpReduceSum(float val){
-    unsigned int mask = 0xffffff;
+    unsigned int mask = 0xffffffff;
     for(size_t offset = warpSize / 2; offset > 0; offset >>= 1)
 
         val += __shfl_down_sync(mask, val, offset);
@@ -46,7 +46,7 @@ __inline__ __device__ float blockReduceSum(float val){
 
 __global__ void kernelReduceSum(const float* __restrict__ dA, float* __restrict__ dSum, size_t N){
     size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
-    float sum = 0;
+    float sum = 0.0f;
     for(size_t i = tid; i < N; i += blockDim.x * gridDim.x)
         sum += dA[i];
     
@@ -58,9 +58,9 @@ __global__ void kernelReduceSum(const float* __restrict__ dA, float* __restrict_
 Nvidia T4 (40 SM) google colab
 
 Full work (data transport + calculations)
-GPU res = 5e+12; Time = 21.0164 ms
-CPU res = 5e+12; Time = 29.8656 ms
-Boost(time CPU/GPU) = 1.42106
+GPU res = 4.99998e+12; Time = 10.6447 ms
+CPU res = 5e+12; Time = 29.1608 ms
+Boost(time CPU/GPU) = 2.73946
 
 Only calculations
 GPU res = 5e+12; Time = 10.5654 ms

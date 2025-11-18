@@ -18,9 +18,9 @@ void fill_array(size_t N, float* arr){
 }
 
 __forceinline__ __device__ float warpReduceSum(float val){
-    unsigned int mask = 0xffffff;
+    unsigned int mask = 0xffffffff;
     for(size_t offset = warpSize / 2; offset > 0; offset >>= 1){
-        val = __shfl_down_sync(mask, val, offset);
+        val += __shfl_down_sync(mask, val, offset);
     }
     return val;
 }
@@ -38,13 +38,13 @@ __global__ void reduceKernel(const float* __restrict__ dA, float* __restrict__ d
     // Good way
     size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-    float sum = 0;
+    float sum = 0.0f;
     for(size_t i = tid; i < N; i += blockDim.x * gridDim.x){
         sum += dA[i];
     }
 
     sum = warpReduceSum(sum);
-    if(threadIdx.x & (warpSize - 1) == 0){
+    if((threadIdx.x & (warpSize - 1)) == 0){
         atomicAdd(&dSum[0], sum);
     }
 }
