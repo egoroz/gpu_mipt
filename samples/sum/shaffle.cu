@@ -63,9 +63,9 @@ CPU res = 5e+12; Time = 29.609 ms
 Boost(time CPU/GPU) = 2.9797
 
 Only calculations
-GPU res = 5e+12; Time = 10.5654 ms
-CPU res = 5e+12; Time = 28.9812 ms
-Boost(time CPU/GPU) = 2.74303
+GPU res = 4.99999e+12; Time = 0.947808 ms
+CPU res = 5e+12; Time = 29.1614 ms
+Boost(time CPU/GPU) = 30.7672
 */
 int main(int argc, char** argv){
     size_t N = 1e7;
