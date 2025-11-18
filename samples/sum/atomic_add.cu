@@ -82,7 +82,7 @@ int main(int argc, char** argv){
     float *dA = nullptr, *dSum = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dSum, sizeof(float)));
-    CUDA_CHECK(cudaMemset(dSum, 0, n_blocks * sizeof(float)));
+    CUDA_CHECK(cudaMemset(dSum, 0, sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
     
     reduceKernel<<<n_blocks, n_threads>>>(dA, dSum, N);
