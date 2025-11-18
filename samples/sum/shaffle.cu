@@ -58,9 +58,9 @@ __global__ void kernelReduceSum(const float* __restrict__ dA, float* __restrict_
 Nvidia T4 (40 SM) google colab
 
 Full work (data transport + calculations)
-GPU res = 4.99998e+12; Time = 10.6447 ms
-CPU res = 5e+12; Time = 29.1608 ms
-Boost(time CPU/GPU) = 2.73946
+GPU res = 4.99999e+12; Time = 9.9369 ms
+CPU res = 5e+12; Time = 29.609 ms
+Boost(time CPU/GPU) = 2.9797
 
 Only calculations
 GPU res = 5e+12; Time = 10.5654 ms
@@ -83,21 +83,21 @@ int main(int argc, char** argv){
     CUDA_CHECK(cudaEventCreate(&start_gpu));
     CUDA_CHECK(cudaEventCreate(&stop_gpu));
     
-    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     float *dA = nullptr, *dSum = nullptr;
     CUDA_CHECK(cudaMalloc(&dA, N * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&dSum, sizeof(float)));
     CUDA_CHECK(cudaMemset(dSum, 0, sizeof(float)));
     CUDA_CHECK(cudaMemcpy(dA, hA, N * sizeof(float), cudaMemcpyHostToDevice));
     
+    CUDA_CHECK(cudaEventRecord(start_gpu));  // start time GPU
     kernelReduceSum<<<n_blocks, n_threads>>>(dA, dSum, N);
+    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
     
     CUDA_CHECK(cudaGetLastError());
     
     CUDA_CHECK(cudaMemcpy(hSum, dSum, sizeof(float), cudaMemcpyDeviceToHost));
     
     float result = hSum[0];
-    CUDA_CHECK(cudaEventRecord(stop_gpu));  // end time GPU
     
     CUDA_CHECK(cudaEventSynchronize(stop_gpu)); // Можно без нее т.к. синхронизация есть в cudaMemcpy
     float gpu_ms = 0;
