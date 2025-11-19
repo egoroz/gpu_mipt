@@ -6,16 +6,16 @@
 #include <time.h>
 
 // ---------------------------------------------------------
-// Функция-ядро (Kernel)
+// Часть 1. Функция-ядро (Kernel)
 // ---------------------------------------------------------
 __global__ void function(float *dA, float *dB, float *dC, int size) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     
-    // Проверка границ (хотя здесь размер кратен блокам)
+    // Проверка границ
     if (i < size) {
         float ab = dA[i] * dB[i];
         float sum = 0.0f;
-        // Имитация сложной нагрузки
+        // Нагрузочный цикл
         for (int j = 0; j < 100; j++) {
             sum = sum + sinf(j + ab);
         }
@@ -25,11 +25,11 @@ __global__ void function(float *dA, float *dB, float *dC, int size) {
 
 int main() {
     // ---------------------------------------------------------
-    // Инициализация переменных и памяти
+    // Часть 2. Инициализация и выделение памяти
     // ---------------------------------------------------------
-    float *hA, *hB, *hC; // Host Pinned
-    float *hC_CPU;       // Host Standard (для CPU теста)
-    float *dA, *dB, *dC; // Device
+    float *hA, *hB, *hC; // Host Pinned Memory
+    float *hC_CPU;       // Host Standard Memory (для CPU теста)
+    float *dA, *dB, *dC; // Device Memory
 
     int nStream = 4; 
     int total_N = 512 * 50000; // 25,600,000 элементов
@@ -41,7 +41,7 @@ int main() {
     unsigned int mem_size = sizeof(float) * size;
     unsigned int total_mem_size = sizeof(float) * total_N;
 
-    // Выделение Pinned Memory (Обязательно для асинхронности!)
+    // Выделение Pinned Memory (Критично для асинхронности)
     cudaMallocHost((void**)&hA, total_mem_size);
     cudaMallocHost((void**)&hB, total_mem_size);
     cudaMallocHost((void**)&hC, total_mem_size);
@@ -75,8 +75,7 @@ int main() {
     float timeTotal2, timeKernel2;
 
     // =========================================================
-    // ВАРИАНТ 1: 3 ЦИКЛА (Как на слайдах)
-    // Сначала все H2D, потом все Kernel, потом все D2H
+    // ВАРИАНТ 1: 3 ЦИКЛА (Breadth-First - Как на слайдах)
     // =========================================================
     printf("Running GPU Variant 1 (3 loops structure)...\n");
     
@@ -115,8 +114,7 @@ int main() {
     for(int i=0; i<total_N; i++) hC[i] = 0.0f;
 
     // =========================================================
-    // ВАРИАНТ 2: 1 ЦИКЛ (Вся цепочка в одном цикле)
-    // Для каждого стрима: H2D -> Kernel -> D2H
+    // ВАРИАНТ 2: 1 ЦИКЛ (Depth-First - Вся цепочка в одном цикле)
     // =========================================================
     printf("Running GPU Variant 2 (1 single loop)...\n");
 
@@ -170,19 +168,27 @@ int main() {
     printf("РЕЗУЛЬТАТ\n");
     printf("================================================\n");
     
-    // CPU
+    // --- CPU ---
     printf("CPU calculation time: \t%.0f ms\n", cpu_time_ms);
     printf("------------------------------------------------\n");
 
-    // GPU Вариант 1 (По слайдам)
+    // --- GPU Вариант 1 ---
+    float rateKernel1 = cpu_time_ms / timeKernel1;
+    float rateTotal1 = cpu_time_ms / timeTotal1;
+
     printf("GPU (3 Loops) time: \t%.0f ms (%.0f)\n", timeKernel1, timeTotal1);
-    printf("Rate (3 Loops): \t%.0f x\n", cpu_time_ms / timeTotal1);
+    // Вывод ускорения: Без скобок (по ядру) и в скобках (по полному времени)
+    printf("Rate (3 Loops): \t%.0f x (%.0f)\n", rateKernel1, rateTotal1);
     
     printf("------------------------------------------------\n");
 
-    // GPU Вариант 2 (Один цикл)
+    // --- GPU Вариант 2 ---
+    float rateKernel2 = cpu_time_ms / timeKernel2;
+    float rateTotal2 = cpu_time_ms / timeTotal2;
+
     printf("GPU (1 Loop) time: \t%.0f ms (%.0f)\n", timeKernel2, timeTotal2);
-    printf("Rate (1 Loop): \t\t%.0f x\n", cpu_time_ms / timeTotal2);
+    // Вывод ускорения: Без скобок (по ядру) и в скобках (по полному времени)
+    printf("Rate (1 Loop): \t\t%.0f x (%.0f)\n", rateKernel2, rateTotal2);
     
     printf("------------------------------------------------\n");
     printf("CUDA-Streams: %d\n", nStream);
