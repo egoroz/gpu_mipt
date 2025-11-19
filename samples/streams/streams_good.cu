@@ -13,7 +13,7 @@ __global__ void function(float *dA, float *dB, float *dC, int size) {
     if (i < size) {
         float ab = dA[i] * dB[i];
         float sum = 0.0f;
-        for (int j = 0; j < 10; j++) {
+        for (int j = 0; j < 5; j++) {
             sum = sum + sinf(j + ab);
         }
         dC[i] = sum;
@@ -137,7 +137,7 @@ int main() {
     for (int k = 0; k < total_N; k++) {
         float ab = hA[k] * hB[k];
         float sum = 0.0f;
-        for (int j = 0; j < 10; j++) sum += sinf(j + ab);
+        for (int j = 0; j < 5; j++) sum += sinf(j + ab);
         hC_CPU[k] = sum;
     }
 
