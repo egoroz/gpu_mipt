@@ -31,7 +31,7 @@ int main() {
     float *hC_CPU;       // Host Standard Memory (для CPU теста)
     float *dA, *dB, *dC; // Device Memory
 
-    int nStream = 4; 
+    int nStream = 16; 
     int total_N = 512 * 50000; // 25,600,000 элементов
     int size = total_N / nStream; 
     
