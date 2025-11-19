@@ -32,7 +32,7 @@ int main() {
     float *dA, *dB, *dC; // Device Memory
 
     int nStream = 4; 
-    int total_N = 512 * 50000; // 25,600,000 элементов
+    int total_N = 512 * 500000; // 25,600,000 элементов
     int size = total_N / nStream; 
     
     int N_thread = 512;             
